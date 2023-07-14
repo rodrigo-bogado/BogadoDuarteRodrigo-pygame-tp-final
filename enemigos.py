@@ -6,9 +6,6 @@ from auxiliares import spritesheet_a_surfaces
 
 ruta_snek_idle = "sprites\Carpincho\snek_idle.png"
 
-# Group
-snek_group = pygame.sprite.Group()
-
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)

@@ -1,145 +1,177 @@
 import pygame
 from pygame.locals import *
 import pygame.sprite
-from constantes import *
-from world import World,world_data,world_data_2
-from player import Player
-from enemigos import snek_group
-from trampas import lava_group,exit_group
-from auxiliares import Fade
-from button import Button
 import pygame.mixer
+from auxiliares import draw_text
+from player import Player
+from world import World,snek_group,lava_group,coin_group,exit_group,dummy_coin_group
+from trampas import Coin, Heart
+from constantes import *
+from button import Button
+from niveles import *
 
 pygame.init()
 pygame.mixer.init()
 
-# Framerate
-clock = pygame.time.Clock()
-fps = 60
-
-# Inicialización pantalla
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+#Inicializa pantalla
+screen = pygame.display.set_mode((screen_width,screen_height))
 pygame.display.set_caption("Carpinchos en fuga")
 
-# inicialización BGM y efectos
+#BGM
+pygame.mixer.music.load(ruta_carnavalito)
+pygame.mixer.music.set_volume(0.4)
+pygame.mixer.music.play(-1, 0.0, 0)
 
-ruta_carnavalito = r"sounds\carnavalito.mp3"
-ruta_jump = r"sounds\jump.mp3"
-ruta_death = r"sounds\death.mp3"
+# Define fuentes
+font_score = pygame.font.SysFont("Tahoma", 30)
+font_big = pygame.font.SysFont("Bauhaus 93", 70)
+font_title = pygame.font.SysFont("Impact", 70)
 
-sound_jump = pygame.mixer.Sound(ruta_jump)
-sound_death = pygame.mixer.Sound(ruta_death)
+# Reinicia la instancia de world y sus componentes
+def reset_level(level):
+    player.reset(50, screen_height - 100)
+    snek_group.empty()
+    lava_group.empty()
+    coin_group.empty()
+    exit_group.empty()
+    if level == 1:
+        world_data = level_1
+        world = World(world_data)
+    if level == 2:
+        world_data = level_2
+        world = World(world_data)
+    if level == 3:
+        world_data = level_3
+        world = World(world_data)
 
-death_sound_flag = False
+    return world
 
-# Carga de imágenes botones
-restart_normal = r"sprites\restart_normal.png"
-restart_hover = r"sprites\restart_hover.png"
-start_normal = r"sprites\start_normal.png"
-start_hover = r"sprites\start_hover.png"
-exit_normal = r"sprites\exit_normal.png"
-exit_hover = r"sprites\exit_hover.png"
+# Define instancia del mundo
+if level == 1:
+    world_data = level_1
+    world = World(world_data)
+if level == 2:
+    world_data = level_2
+    world = World(world_data)
+if level == 3:
+    world_data = level_3
+    world = World(world_data)
 
-# Definición de instancias
-world = World(world_data) # Mapa
-world_2 = World(world_data_2) # Mapa 2
- 
-player = Player(0,SCREEN_HEIGHT/2) # Jugador
+# Instancia del jugador
+player = Player(100,screen_height - 200)
 
-fade = Fade() # Efecto Fade (semi-opaco)
+# Crear botones
+restart_button = Button(310, 350, restart_normal,restart_hover)
+start_button = Button(310, 200, start_normal,start_hover)
+exit_button = Button(310, 400, exit_normal,exit_hover)
 
-button_restart = Button(300,200, restart_normal, restart_hover) # Botón reinicio
-button_start = Button(300,200, start_normal, start_hover) # Botón inicio
-button_exit = Button(300,400, exit_normal, exit_hover) # Botón salida
+# Moneda del contador
+score_coin = Coin(10, 10)
+heart_icon = Heart(150,10)
+dummy_coin_group.add(score_coin)
+dummy_coin_group.add(heart_icon)
 
-#Bucle principal
+# Bucle principal
 run = True
 
-main_menu = True
-
-while run == True:
+while run:
 
     clock.tick(fps)
 
-    world.draw_bg(screen) # Dibuja fondo
+    # Dibuja fondo
+    world.draw_bg(screen)
 
-    if main_menu == True: # Game main menu
-        
-         button_start.draw(screen) # Botón de Start
-         button_exit.draw(screen) # Botón de exit
-
-         if button_start.is_clicked == True: # Click = Game Start
-            pygame.mixer.music.load(ruta_carnavalito)
-            pygame.mixer.music.play(-1)
-            player.game_status = 0 
-            main_menu = False
-            death_sound_flag = True
-            player.reset(0,SCREEN_HEIGHT/2)
-
-         if button_exit.is_clicked == True: # Click = Game Exit
+    # Menú principal al comenzar
+    if main_menu == True:
+        draw_text(screen,"Carpinchos en fuga!", font_title, "White", 130,50)
+        draw_text(screen,"Escapá del Delta antes de que te coman!", font_score, "White", 140,130)
+        # Botón de salir
+        if exit_button.draw(screen):
             run = False
+        # Botón de comenzar
+        if start_button.draw(screen):
+            main_menu = False
     else:
+        # Dibuja tiles del mundo
+        world.draw(screen)
 
-        if player.nivel == 1:
-            
-            world.draw(screen) # Dibuja piso y plataformas
+        # Si el personaje está vivo
+        if game_over == 0:
 
-        elif player.nivel == 2:
+            # Actualiza todos los grupos
+            snek_group.update()
+            lava_group.update(screen)
+            coin_group.update(screen)
+            dummy_coin_group.update(screen)
 
-            world.generate_world(world_data)
+            # Si colisiona con monedas
+            if pygame.sprite.spritecollide(player,coin_group, True):
+                sound_coin.play()
+                score += 1
+                player.score_objetivo += 1
+            draw_text(screen,"X " + str(score), font_score, white, 70, 13)
+            draw_text(screen,"X " + str(player.lives), font_score, white, 210, 13)
 
-            world_2.draw(screen) # Dibuja piso y plataformas
+        # Dibuja todos los grupos    
+        snek_group.draw(screen)
+        lava_group.draw(screen)
+        coin_group.draw(screen)
+        exit_group.draw(screen)
+        dummy_coin_group.draw(screen)
 
-        snek_group.draw(screen) # Dibuja mob (snek)
+        # Actualiza jugador y define estado del juego
+        game_over = player.update(game_over,screen,world)
 
-        lava_group.draw(screen) # Dibuja trampa (lava)
+        # Si el jugador muere y quedan vidas
+        if game_over == -1 and player.lives > 0:
+            draw_text(screen,"-1 LIFE :(", font_big, red, 250,200)
+            # Boton de reinicio
+            if restart_button.draw(screen):
+                # Se reinicia instancia del jugador
+                player.reset(10, screen_height - 200)
+                game_over = 0
+        # Si el jugador muere y NO quedan vidas
+        elif game_over == -1 and player.lives == 0:
+            draw_text(screen,"GAME OVER :(", font_big, red, 250,200)
+            # Boton de reinicio
+            if restart_button.draw(screen):
+                level = 1
+                #reset level
+                world_data = []
+                world = reset_level(level)
+                game_over = 0
+                score = 0
+                player.lives = 2
 
-        exit_group.draw(screen) # Dibuja salida (exit)
-
-        player.update(screen) # Dibuja personaje
- 
-        if player.game_status == 0: # Game On
-
-            snek_group.update(screen) # Actualiza animación mob (snek)
-
-            lava_group.update(screen) # Actualiza animación lava
-
-        if player.game_status == -1: # Game OFF
-            
-            if death_sound_flag == True:
-                sound_death.play()
-                death_sound_flag = False
-            fade.update()
-            screen.blit(fade.image, fade.rect)
-            button_restart.draw(screen)
-            button_exit.draw(screen)
-
-            if button_restart.is_clicked == True:
-                player.game_status = 0
-                death_sound_flag = True
-                player.reset(0,SCREEN_HEIGHT/2)
-
-            if button_exit.is_clicked == True:
-                run = False
+        # Si el jugador completa el nivel
+        if game_over == 1:
+            player.score_objetivo = 0
+            level += 1
+            # Reinicia instancia del mundo y pasa al siguiente
+            if level <= 3:
+                world_data = []
+                world = reset_level(level)
+                game_over = 0
+            else:
+                # Si es el último nivel reinicia al primero.
+                draw_text(screen,"CARPINCHULATIONS!", font_big, green, 150,80)
+                draw_text(screen,"Pudiste escapar del delta", font_big, "White", 110,120)
+                draw_text(screen,"tomando el 453 ramal 2!", font_big, "White", 110,160)
+                if restart_button.draw(screen):
+                    level = 1
+                    #reset level
+                    world_data = []
+                    world = reset_level(level)
+                    game_over = 0
+                    score = 0
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
-        if event.type == pygame.KEYDOWN and player.game_status == 0 and player.in_air == False:
-            if event.key == pygame.K_SPACE:
-                sound_jump.play()
+    
+    #DEBUG
 
-    # Debug
-
-    #print("C ",player.counter,"I ",player.index,"D ",player.direction)
-    #for enemy in snek_group:
-    #    print(enemy.index)
-    #print(player.jumped)
-    #print("Direction: ",player.direction,"Idle: ",player.idle,"Jumped: ",player.jumped)
-    #print(player.rect)
-    #print(button.is_hovered)
-    #print(player.vel_y)
-    #print(player.game_status)
+    print(player.score_objetivo)
 
     pygame.display.update()
 

@@ -40,6 +40,11 @@ def spritesheet_a_surfaces(ruta,columnas, filas,flip,escala):
 
     return lista_fotogramas
 
+# Función para mostrar texto en pantalla
+def draw_text(screen,text,font,text_col, x, y):
+    img = font.render(text, True, text_col)
+    screen.blit(img, (x,y))
+
 class Fade(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
